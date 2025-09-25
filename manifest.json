@@ -1,31 +1,39 @@
 {
-  "manifest_version": 3,
-  "name": "Reel Follow-Up",
-  "version": "0.1.0",
-  "description": "Easily find the next part of a video series on social media.",
-  "permissions": [
-    "tabs"
-  ],
-  "background": {
-    "service_worker": "background.js"
-  },
-  "content_scripts": [
-    {
-      "matches": [
-        "https://www.instagram.com/*"
-      ],
-      "js": [
-        "content.js"
-      ]
+    "manifest_version": 3,
+    "name": "Reel Follow-Up",
+    "version": "1.0",
+    "description": "Finds the next part of a multi-part Reel series and navigates to it.",
+    "permissions": [
+        "storage"
+    ],
+    "host_permissions": [
+        "*://*.instagram.com/*"
+    ],
+    "background": {
+        "service_worker": "background.js"
+    },
+    "content_scripts": [
+        {
+            "matches": [
+                "*://*.instagram.com/*"
+            ],
+            "js": [
+                "content.js"
+            ]
+        }
+    ],
+    "action": {
+        "default_popup": "popup.html",
+        "default_icon": {
+            "16": "icons/icon16.png",
+            "48": "icons/icon48.png",
+            "128": "icons/icon128.png"
+        }
+    },
+    "icons": {
+        "16": "icons/icon16.png",
+        "48": "icons/icon48.png",
+        "128": "icons/icon128.png"
     }
-  ],
-  "action": {
-    "default_popup": "popup.html",
-    "default_title": "Reel Follow-Up"
-  },
-  "icons": {
-    "16": "icons/icon16.png",
-    "48": "icons/icon48.png",
-    "128": "icons/icon128.png"
-  }
 }
+
