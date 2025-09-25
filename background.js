@@ -1,20 +1,32 @@
 /**
- * background.js - Service Worker
- *
- * This script handles tasks that require browser-level API access,
- * such as creating new tabs. It listens for messages from content scripts.
+ * background.js - Listens for messages from the content script.
  */
-
-// Listen for a message from any content script.
-chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
-  // Verify the message is the one we expect: 'openTab' with a URL.
-  if (message.action === 'openTab' && message.url) {
-    // Use the Chrome Tabs API to create a new tab.
-    chrome.tabs.create({
-      url: message.url,
-      active: true // Make the new tab focused.
-    });
-  }
-  // Note: It's good practice to return true for asynchronous sendResponse,
-  // but we don't need to send a response here.
+chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
+    // Handles the old "openTab" action if needed, though it's deprecated.
+    if (request.action === 'openTab') {
+        chrome.tabs.create({
+            url: request.url
+        });
+    }
+    // Listens for a request to fetch a URL.
+    // This is used to bypass content script security limitations for network requests.
+    else if (request.action === 'fetchUrl') {
+        fetch(request.url)
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                return response.text();
+            })
+            .then(text => sendResponse({
+                success: true,
+                data: text
+            }))
+            .catch(error => sendResponse({
+                success: false,
+                error: error.message
+            }));
+        return true; // Required to indicate an asynchronous response.
+    }
 });
+
