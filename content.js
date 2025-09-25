@@ -1,25 +1,18 @@
 /**
- * Reel Follow-Up: content.js
- * * This script is injected into Instagram pages. Its primary responsibilities are:
- * 1. To observe the page for when new Reel videos are loaded into the DOM.
- * 2. To inject a "Find Next Part" button into the UI for each Reel.
- * 3. When the button is clicked, to scrape the creator's username and the Reel's caption.
- * 4. To construct a Google search query based on the scraped data.
- * 5. To send a message to the background script (background.js) to open the search results in a new tab.
+ * Reel Follow-Up: content.js (with debugging)
  */
 
-// A helper function to create our custom button. This makes the code cleaner.
+// DEBUGGING MESSAGE 1: Check if the script is running at all.
+console.log("Reel Follow-Up: content.js script injected and running.");
+
 function createFollowUpButton() {
     const button = document.createElement('button');
-    button.className = 'reel-follow-up-btn'; // Custom class for styling
+    button.className = 'reel-follow-up-btn';
     button.style.background = 'none';
     button.style.border = 'none';
     button.style.cursor = 'pointer';
     button.style.padding = '8px';
-    button.title = 'Find Next Part'; // Tooltip on hover
-
-    // Using an SVG for the icon so we don't need to manage image files yet.
-    // This is a "fast-forward" icon.
+    button.title = 'Find Next Part';
     button.innerHTML = `
         <svg aria-label="Find Next Part" class="x1lliihq x1n2onr6 xyb1xck" fill="currentColor" height="24" role="img" viewBox="0 0 24 24" width="24">
             <title>Find Next Part</title>
@@ -29,84 +22,63 @@ function createFollowUpButton() {
     return button;
 }
 
-// This function handles the main logic when our button is clicked.
 function handleButtonClick(event) {
-    // Find the main article element for the Reel. We traverse up from the button.
     const articleElement = event.currentTarget.closest('article');
     if (!articleElement) {
         console.error("Reel Follow-Up: Could not find the article element.");
         return;
     }
-
-    // 1. Scrape the Creator's Username
-    // The username is typically in a link inside the header of the article.
     const usernameLink = articleElement.querySelector('header a[role="link"]');
     const username = usernameLink ? usernameLink.textContent.trim() : '';
-
-    // 2. Scrape the Video Caption
-    // The caption is often in an H1 tag.
     const captionElement = articleElement.querySelector('h1');
     let caption = captionElement ? captionElement.textContent.trim() : '';
-    
-    // A simple cleanup: remove hashtags to make the search query cleaner.
     caption = caption.replace(/#\w+/g, '');
 
     if (!username || !caption) {
         console.error("Reel Follow-Up: Could not find username or caption.");
         return;
     }
-
-    // 3. Construct the Google Search Query
-    // We combine the username and caption and add common "next part" phrases.
     const searchQuery = `${username} ${caption} part 2`;
     const googleSearchUrl = `https://www.google.com/search?q=${encodeURIComponent(searchQuery)}`;
-
-    // 4. Send the URL to the background script to open a new tab
-    chrome.runtime.sendMessage({
-        action: 'openTab',
-        url: googleSearchUrl
-    });
+    chrome.runtime.sendMessage({ action: 'openTab', url: googleSearchUrl });
 }
 
-// This function finds Reels and adds our button to them.
 function addButtonsToReels() {
-    // Instagram's Reel containers are often <article> elements.
     const articles = document.querySelectorAll('article');
+    // DEBUGGING MESSAGE 2: Check if we are finding any article elements.
+    if (articles.length > 0) {
+        console.log(`Reel Follow-Up: Found ${articles.length} <article> elements.`);
+    }
 
     articles.forEach(article => {
-        // Check if this article is a Reel and if we haven't already added a button.
-        // We add a custom attribute to mark articles we've already processed.
         if (article.querySelector('video') && !article.dataset.reelFollowUpButtonAdded) {
-            
-            // Mark this article as processed.
             article.dataset.reelFollowUpButtonAdded = 'true';
-
-            // Find the area where the "like", "comment", and "share" buttons are.
+            
+            // This selector is the most likely point of failure.
             const actionsContainer = article.querySelector('section > .x1i10hfl');
+            
             if (actionsContainer) {
+                // DEBUGGING MESSAGE 3: This will only appear if we successfully find the container.
+                console.log("Reel Follow-Up: SUCCESS! Found actions container. Injecting button.", article);
                 const newButton = createFollowUpButton();
                 newButton.addEventListener('click', handleButtonClick);
-                // Insert our button right after the "like" button.
                 actionsContainer.parentElement.insertBefore(newButton, actionsContainer.nextSibling);
+            } else {
+                // DEBUGGING MESSAGE 4: This will tell us our selector failed for a specific Reel.
+                console.warn("Reel Follow-Up: Could not find the actions container for a Reel. The class name has likely changed.", article);
             }
         }
     });
 }
 
-// Instagram is a single-page app, so content loads dynamically.
-// We need to use a MutationObserver to watch for changes to the page.
 const observer = new MutationObserver((mutations) => {
-    // We don't need to inspect the mutations themselves, just run our function
-    // whenever the DOM changes to see if new Reels have been loaded.
     addButtonsToReels();
 });
 
-// Start observing the entire body of the page for changes.
 observer.observe(document.body, {
     childList: true,
     subtree: true
 });
 
-// Run the function once when the script is first injected, just in case
-// some Reels are already on the page.
 addButtonsToReels();
+
